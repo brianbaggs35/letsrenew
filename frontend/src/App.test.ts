@@ -202,9 +202,16 @@ describe("LetsRenew app", () => {
     const importInputs = importForm.findAll("input");
     await importInputs[0].setValue("Imported");
     await importInputs[1].setValue("/certs/fullchain.pem");
+    await importInputs[2].setValue("/certs/privkey.pem");
     await importForm.trigger("submit");
     await flushPromises();
     expect(wrapper.text()).toContain("Certificate added for expiration monitoring.");
+    const importRequest = fetchMock.mock.calls.find((call) => String(call[0]) === "/api/certificates/import");
+    expect(JSON.parse(String(importRequest?.[1]?.body))).toEqual({
+      name: "Imported",
+      cert_path: "/certs/fullchain.pem",
+      key_path: "/certs/privkey.pem",
+    });
   });
 
   it("reports issue, import, provider, and action failures", async () => {
