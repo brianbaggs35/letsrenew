@@ -4,7 +4,7 @@ LetsRenew is a single-container certificate manager with a Vue/TypeScript web UI
 
 ## Run it
 
-Requirements: Docker Compose v2, Make, and Python 3 for generating first-run secrets.
+Requirements: Docker Compose v2, Make, and Python 3.14.8 for generating first-run secrets. The container uses Node 24 to build the UI and Python 3.14.8 to run the API.
 
 ```sh
 make up
@@ -35,9 +35,11 @@ The initial version focuses on a single local administrator, DNS-01 issuance, mo
 
 ## Development and automation
 
-The GitHub Actions CI workflow runs backend tests, builds the Vue frontend, and builds the container on pushes to `main`/`master` and pull requests. Pushing a `v*` tag runs the release workflow, publishes versioned and `latest` images to GHCR, and creates a GitHub Release:
+The GitHub Actions CI workflow runs pytest and Vitest coverage reports (without a configured coverage threshold), Ruff, ESLint, Bandit, Pyright, vue-tsc, Playwright browser specs, CodeQL, Trivy, and a container build on pushes to `main`/`master` and pull requests. Pushing a `v*` tag runs the release workflow, publishes versioned and `latest` images to GHCR, and creates a GitHub Release:
 
 ```sh
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+The current frontend toolchain uses Node 24, Vue 3, Vite 8, and TypeScript 6.0.3. The app/test image uses Python 3.14.8.

@@ -259,8 +259,8 @@ onMounted(load);
             <label>Configuration name<input v-model="providerForm.name" required /></label>
             <label>Plugin identifier<input v-model="providerForm.plugin" placeholder="ionos" required /></label>
             <label>Python package<input v-model="providerForm.package" placeholder="certbot-dns-ionos" required /></label>
-            <label>Credentials JSON<textarea v-model="providerForm.credentials" rows="4" placeholder='{"dns_ionos_prefix":"…","dns_ionos_secret":"…"}'></textarea></label>
-            <label>Plugin options JSON <span class="muted">(optional)</span><textarea v-model="providerForm.options" rows="3" placeholder='{"propagation-seconds":"60"}'></textarea></label>
+            <label>Credentials JSON<textarea v-model="providerForm.credentials" rows="4" placeholder="{&quot;dns_ionos_prefix&quot;:&quot;…&quot;,&quot;dns_ionos_secret&quot;:&quot;…&quot;}"></textarea></label>
+            <label>Plugin options JSON <span class="muted">(optional)</span><textarea v-model="providerForm.options" rows="3" placeholder="{&quot;propagation-seconds&quot;:&quot;60&quot;}"></textarea></label>
             <button class="button primary full">Save encrypted credentials</button>
           </form>
         </div>
