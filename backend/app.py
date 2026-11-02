@@ -394,7 +394,10 @@ def resolve_certificate_path(path: str) -> Path:
         raise HTTPException(
             422, "Certificate paths must resolve inside the mounted certificate directory"
         )
-    return Path(resolved_path)
+    certificate_file = Path(resolved_path)
+    if not certificate_file.is_file():
+        raise HTTPException(422, "Certificate path must be a file")
+    return certificate_file
 
 
 @app.post("/api/login")
@@ -414,15 +417,12 @@ def list_certificates():
 @app.post("/api/certificates/import")
 def import_certificate(data: ImportInput):
     cert_path = resolve_certificate_path(data.cert_path)
-    if not cert_path.is_file():
-        raise HTTPException(422, "Certificate file does not exist")
     try:
         x509.load_pem_x509_certificate(cert_path.read_bytes())
     except ValueError as exc:
         raise HTTPException(422, "File is not a valid PEM certificate") from exc
-    key_path = resolve_certificate_path(data.key_path) if data.key_path else None
-    if key_path and not key_path.is_file():
-        raise HTTPException(422, "Private key file does not exist")
+    if data.key_path:
+        resolve_certificate_path(data.key_path)
     with db() as connection:
         connection.execute(
             """INSERT INTO certificates
