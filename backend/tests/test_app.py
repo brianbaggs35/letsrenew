@@ -89,16 +89,19 @@ def test_imported_certificate_is_tracked_with_expiry(client):
     )
     cert_path = Path(os.environ["DATA_DIR"]) / "monitor.pem"
     cert_path.write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
+    key_path = Path(os.environ["DATA_DIR"]) / "monitor-key.pem"
+    key_path.write_text("private key")
 
     response = client.post(
         "/api/certificates/import",
         headers=auth(),
-        json={"name": "Test certificate", "cert_path": str(cert_path)},
+        json={"name": "Test certificate", "cert_path": str(cert_path), "key_path": str(key_path)},
     )
     assert response.status_code == 200
     tracked = client.get("/api/certificates", headers=auth()).json()[0]
     assert tracked["available"] is True
     assert tracked["managed"] is False
+    assert tracked["key_path"] == str(key_path)
     assert 58 <= tracked["days_left"] <= 60
 
 
@@ -247,6 +250,22 @@ def test_deploy_certificate_copies_files_with_secure_modes(tmp_path):
     assert (destination / "privkey.pem").read_text() == "private key"
     assert stat.S_IMODE((destination / "fullchain.pem").stat().st_mode) == 0o644
     assert stat.S_IMODE((destination / "privkey.pem").stat().st_mode) == 0o600
+
+    archive = tmp_path / "archive"
+    archive.mkdir()
+    archived_cert = archive / "cert1.pem"
+    archived_key = archive / "privkey1.pem"
+    archived_cert.write_text("old certificate")
+    archived_key.write_text("old private key")
+    (destination / "fullchain.pem").unlink()
+    (destination / "privkey.pem").unlink()
+    (destination / "fullchain.pem").symlink_to(archived_cert)
+    (destination / "privkey.pem").symlink_to(archived_key)
+    application.deploy_certificate(cert, key, str(destination))
+    assert (destination / "fullchain.pem").is_symlink()
+    assert (destination / "privkey.pem").is_symlink()
+    assert archived_cert.read_text() == "certificate"
+    assert archived_key.read_text() == "private key"
 
 
 def test_issue_certificate_runs_certbot_and_persists_certificate(client, monkeypatch, tmp_path):

@@ -33,7 +33,7 @@ const providerForm = ref({
   credentials: "{}",
   options: "{}",
 });
-const importForm = ref({ name: "", cert_path: "" });
+const importForm = ref({ name: "", cert_path: "", key_path: "" });
 const authenticated = computed(() => Boolean(token.value));
 
 async function api<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -133,6 +133,7 @@ async function importCertificate() {
       method: "POST",
       body: JSON.stringify({
         ...importForm.value,
+        key_path: importForm.value.key_path || null,
       }),
     });
     message.value = "Certificate added for expiration monitoring.";
@@ -240,12 +241,13 @@ onMounted(load);
         </div>
 
         <div class="panel form-panel import-panel">
-          <p class="eyebrow">EXISTING CERTIFICATE</p><h2>Monitor a certificate</h2>
+          <p class="eyebrow">EXISTING CERTIFICATE</p><h2>Add an existing certificate</h2>
           <form @submit.prevent="importCertificate">
             <label>Label<input v-model="importForm.name" placeholder="Internal API" required /></label>
-            <label>Certificate file path<input v-model="importForm.cert_path" placeholder="/certificates/fullchain.pem" required /></label>
-            <button class="button secondary full" type="submit">Add for monitoring</button>
-            <small>Imported certificates are monitored only. Issue certificates here to enable automatic renewal.</small>
+            <label>Certificate file path<input v-model="importForm.cert_path" placeholder="/certificates/live/example.com/fullchain.pem" required /></label>
+            <label>Private key file path <span class="muted">(optional for monitoring)</span><input v-model="importForm.key_path" placeholder="/certificates/live/example.com/privkey.pem" /></label>
+            <button class="button secondary full" type="submit">Add certificate</button>
+            <small>Imported certificates are monitored only. To renew one with LetsRenew, issue a certificate using the same label and set its deployment directory to this certificate's directory.</small>
           </form>
         </div>
       </section>

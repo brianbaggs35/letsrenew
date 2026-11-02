@@ -10,5 +10,5 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/data
-      - ${CERTIFICATES_HOST_PATH:-./data/certificates}:/certificates:ro
+      - ${CERTIFICATES_HOST_PATH:-./data/certificates}:/certificates:rw
       - ${DEPLOY_HOST_PATH:-./data/deploy}:/deploy

@@ -250,11 +250,17 @@ def deploy_certificate(cert_path: Path, key_path: Path, destination: str | None)
     for source, filename in ((cert_path, "fullchain.pem"), (key_path, "privkey.pem")):
         if not source.is_file():
             raise HTTPException(500, f"Certificate file is missing: {source}")
-        with tempfile.NamedTemporaryFile(dir=target_dir, delete=False) as temporary:
+        destination_file = target_dir / filename
+        target_file = (
+            destination_file.resolve(strict=True)
+            if destination_file.is_symlink()
+            else destination_file
+        )
+        with tempfile.NamedTemporaryFile(dir=target_file.parent, delete=False) as temporary:
             temporary_path = Path(temporary.name)
         shutil.copyfile(source, temporary_path)
         temporary_path.chmod(0o600 if filename == "privkey.pem" else 0o644)
-        temporary_path.replace(target_dir / filename)
+        temporary_path.replace(target_file)
 
 
 def run_renewal(row: sqlite3.Row, force: bool = False) -> subprocess.CompletedProcess[str]:
