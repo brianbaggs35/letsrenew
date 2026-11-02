@@ -5,3 +5,9 @@ frontend/dist/
 __pycache__/
 .pytest_cache/
 *.tsbuildinfo
+coverage/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+.coverage*
+coverage.xml

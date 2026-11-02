@@ -7,15 +7,16 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import threading
 from contextlib import asynccontextmanager, contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from cryptography.fernet import Fernet, InvalidToken
 from cryptography import x509
+from cryptography.fernet import Fernet, InvalidToken
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -115,7 +116,7 @@ def certificate_details(row: sqlite3.Row) -> dict[str, Any]:
     try:
         cert = x509.load_pem_x509_certificate(cert_path.read_bytes())
         expiry = cert.not_valid_after_utc
-        days_left = (expiry - datetime.now(timezone.utc)).total_seconds() / 86400
+        days_left = (expiry - datetime.now(UTC)).total_seconds() / 86400
         result.update(
             expires_at=expiry.isoformat(),
             days_left=max(0, int(days_left)),
@@ -137,7 +138,7 @@ def ensure_plugin(package: str) -> None:
         except importlib.metadata.PackageNotFoundError:
             pass
         result = subprocess.run(
-            [os.sys.executable, "-m", "pip", "install", "--no-input", package],
+            [sys.executable, "-m", "pip", "install", "--no-input", package],
             capture_output=True,
             text=True,
             timeout=600,
@@ -180,6 +181,7 @@ def issue_certificate(
 
     credentials = config.get("credentials", {})
     options = config.get("options", {})
+    credential_file = CREDENTIALS_DIR / f"provider-{provider_id}.ini"
 
     command = [
         "certbot",
@@ -235,7 +237,7 @@ def issue_certificate(
                 str(key_path),
                 deploy_path,
                 provider_id,
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(UTC).isoformat(),
             ),
         )
 
@@ -265,9 +267,17 @@ def run_renewal(row: sqlite3.Row, force: bool = False) -> subprocess.CompletedPr
     ensure_plugin(provider["package"])
     config = decrypt_config(provider["config"])
     command = [
-        "certbot", "renew", "--non-interactive", "--cert-name", row["name"],
-        "--config-dir", str(LE_DIR), "--work-dir", str(DATA_DIR / "work"),
-        "--logs-dir", str(DATA_DIR / "logs"),
+        "certbot",
+        "renew",
+        "--non-interactive",
+        "--cert-name",
+        row["name"],
+        "--config-dir",
+        str(LE_DIR),
+        "--work-dir",
+        str(DATA_DIR / "work"),
+        "--logs-dir",
+        str(DATA_DIR / "logs"),
     ]
     if force:
         command.append("--force-renewal")
@@ -400,7 +410,7 @@ def import_certificate(data: ImportInput):
                 str(cert_path),
                 data.key_path,
                 data.deploy_path,
-                datetime.now(timezone.utc).isoformat(),
+                datetime.now(UTC).isoformat(),
             ),
         )
     return {"status": "imported"}
@@ -518,5 +528,11 @@ def health():
 
 
 STATIC_DIR = Path(__file__).with_name("static")
-if STATIC_DIR.is_dir():
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+
+
+def mount_static_files(target_app: FastAPI, static_dir: Path = STATIC_DIR) -> None:
+    if static_dir.is_dir():
+        target_app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+
+
+mount_static_files(app)
