@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
 DB_PATH = DATA_DIR / "letsrenew.sqlite3"
 LE_DIR = DATA_DIR / "letsencrypt"
+CERTIFICATES_DIR = Path(os.environ.get("CERTIFICATES_DIR", "/certificates"))
 CREDENTIALS_DIR = Path(tempfile.gettempdir()) / "letsrenew-credentials"
 PASSWORD = os.environ.get("APP_PASSWORD", "")
 KEY = os.environ.get("APP_ENCRYPTION_KEY", "")
@@ -379,6 +380,18 @@ class IssueInput(BaseModel):
     deploy_path: str | None = None
 
 
+def resolve_certificate_path(path: str) -> Path:
+    try:
+        certificate_root = CERTIFICATES_DIR.resolve(strict=True)
+        resolved_path = Path(path).resolve(strict=True)
+        resolved_path.relative_to(certificate_root)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise HTTPException(
+            422, "Certificate paths must resolve inside the mounted certificate directory"
+        ) from exc
+    return resolved_path
+
+
 @app.post("/api/login")
 def login(data: LoginInput):
     if not hmac.compare_digest(data.password, PASSWORD):
@@ -395,14 +408,15 @@ def list_certificates():
 
 @app.post("/api/certificates/import")
 def import_certificate(data: ImportInput):
-    cert_path = Path(data.cert_path)
+    cert_path = resolve_certificate_path(data.cert_path)
     if not cert_path.is_file():
         raise HTTPException(422, "Certificate file does not exist")
     try:
         x509.load_pem_x509_certificate(cert_path.read_bytes())
     except ValueError as exc:
         raise HTTPException(422, "File is not a valid PEM certificate") from exc
-    if data.key_path and not Path(data.key_path).is_file():
+    key_path = resolve_certificate_path(data.key_path) if data.key_path else None
+    if key_path and not key_path.is_file():
         raise HTTPException(422, "Private key file does not exist")
     with db() as connection:
         connection.execute(
@@ -413,7 +427,7 @@ def import_certificate(data: ImportInput):
                 key_path=excluded.key_path, deploy_path=excluded.deploy_path, managed=0""",
             (
                 data.name,
-                str(cert_path),
+                data.cert_path,
                 data.key_path,
                 data.deploy_path,
                 datetime.now(UTC).isoformat(),

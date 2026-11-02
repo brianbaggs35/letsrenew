@@ -25,7 +25,7 @@ The container runs as a non-root user mapped to the UID/GID that runs `make up`;
 
 ## Certificates and DNS plugins
 
-* **Import for monitoring:** mount certificate files into `/certificates` (the default host directory is `./data/certificates`), then provide the in-container certificate and optional private-key paths in the UI. Imported certificates are monitored only; the app does not take over their existing renewal process.
+* **Import for monitoring:** mount certificate files into `/certificates` (the default host directory is `./data/certificates`), then provide the in-container certificate and optional private-key paths in the UI. Import paths must resolve inside this mounted directory; certificate symlinks are supported when their targets remain inside it. Imported certificates are monitored only; the app does not take over their existing renewal process.
 * **Issue and auto-renew:** configure a DNS provider, then request a certificate. Renewal checks run every six hours. The deployment directory defaults to `/deploy` (host directory `./data/deploy`); output filenames are `fullchain.pem` and `privkey.pem`.
 * **Use host Let's Encrypt files:** set `CERTIFICATES_HOST_PATH=/etc/letsencrypt` in `.env` to mount the host's full Certbot directory read/write at `/certificates`. The full directory is needed because files under `live/` are symlinks into `archive/`. Use container paths such as `/certificates/live/example.com/fullchain.pem` to import; set an issued certificate's deployment directory to `/certificates/live/example.com` to replace the linked files on renewal while preserving their symlinks.
 * **Grant file permissions:** the container runs with the UID/GID of the user who runs `make up`. To permit it to read and update one existing Certbot lineage without changing ownership of all host certificates, grant that UID access to just the lineage's `live` and `archive` directories (requires `acl`): `sudo setfacl -R -m "u:$(id -u):rwX" /etc/letsencrypt/live/example.com /etc/letsencrypt/archive/example.com` and `sudo setfacl -R -d -m "u:$(id -u):rwX" /etc/letsencrypt/live/example.com /etc/letsencrypt/archive/example.com`. These files contain private keys; only grant access to lineages the app should manage. If your host paths differ, set `CERTIFICATES_HOST_PATH` and `DEPLOY_HOST_PATH` in `.env`; they are mounted at `/certificates` and `/deploy`, respectively.
@@ -45,4 +45,4 @@ git push origin v1.0.0
 gh release create v1.0.0 --generate-notes
 ```
 
-The current frontend toolchain uses Node 24, Vue 3, Vite 8, and TypeScript 6.0.3. The app/test image uses Python 3.14.8.
+The current frontend toolchain uses Node 24, npm 12.2.1, Vue 3, Vite 8, and TypeScript 6.0.3. The app/test image uses Python 3.14.8.
