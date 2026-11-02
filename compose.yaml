@@ -2,6 +2,7 @@ services:
   letsrenew:
     build: .
     restart: unless-stopped
+    user: "${APP_UID:-10001}:${APP_GID:-10001}"
     env_file: .env
     environment:
       DATA_DIR: /data

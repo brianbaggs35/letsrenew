@@ -1,8 +1,12 @@
 COMPOSE = docker compose
+APP_UID ?= $(shell id -u)
+APP_GID ?= $(shell id -g)
+export APP_UID APP_GID
 
 .PHONY: up init start stop down logs
 
 init:
+	mkdir -p data/certificates data/deploy
 	@if [ ! -f .env ]; then \
 		umask 077; \
 		printf 'APP_PASSWORD=%s\nAPP_ENCRYPTION_KEY=%s\n' \
