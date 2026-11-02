@@ -138,7 +138,7 @@ def ensure_plugin(package: str) -> None:
         except importlib.metadata.PackageNotFoundError:
             pass
         result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--no-input", package],
+            [sys.executable, "-m", "pip", "install", "--user", "--no-input", package],
             capture_output=True,
             text=True,
             timeout=600,

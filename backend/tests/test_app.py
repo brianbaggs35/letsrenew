@@ -224,6 +224,7 @@ def test_ensure_plugin_skips_installed_package_and_installs_missing_one(monkeypa
     distribution.side_effect = application.importlib.metadata.PackageNotFoundError
     run.return_value = subprocess.CompletedProcess([], 0, "", "")
     application.ensure_plugin("missing-plugin")
+    assert run.call_args.args[0][3:5] == ["install", "--user"]
     assert run.call_args.args[0][-1] == "missing-plugin"
 
     run.return_value = subprocess.CompletedProcess([], 1, "", "install failed")
