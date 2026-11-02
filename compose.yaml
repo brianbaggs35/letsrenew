@@ -1,0 +1,13 @@
+services:
+  letsrenew:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/data
+      - ${CERTIFICATES_HOST_PATH:-./data/certificates}:/certificates:ro
+      - ${DEPLOY_HOST_PATH:-./data/deploy}:/deploy

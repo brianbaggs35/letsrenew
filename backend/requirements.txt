@@ -1,0 +1,4 @@
+certbot>=2.11,<6
+cryptography>=42,<47
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
