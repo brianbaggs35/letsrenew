@@ -37,7 +37,7 @@ The initial version focuses on a single local administrator, DNS-01 issuance, mo
 
 ## Development and automation
 
-The GitHub Actions CI workflow runs pytest and Vitest coverage reports (without a configured coverage threshold), Ruff, ESLint, Bandit, Pyright, vue-tsc, Playwright browser specs, CodeQL, Trivy, and a container build on pushes to `main`/`master` and pull requests. Publishing a GitHub Release runs the release workflow and publishes versioned and `latest` images to GHCR:
+The GitHub Actions CI workflow runs pytest and Vitest coverage reports (without a configured coverage threshold), Ruff, ESLint, Bandit, Pyright, vue-tsc, Playwright browser specs, CodeQL, Trivy, and a container build on pushes to `main`/`master` and pull requests. Publishing a GitHub Release automatically runs the release workflow and publishes versioned and `latest` images to GHCR. GitHub does not trigger workflows when a release is first saved as a draft; to publish its image while it remains a draft, run the **Release** workflow manually from the Actions tab and enter the release tag:
 
 ```sh
 git tag v1.0.0
