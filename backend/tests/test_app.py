@@ -522,6 +522,7 @@ def test_certificate_import_errors_and_upsert(client, tmp_path, monkeypatch):
     assert missing.status_code == 422
     invalid = certificate_dir / "invalid.pem"
     invalid.write_text("not a certificate")
+    (certificate_dir / "subdirectory").mkdir()
     assert (
         client.post(
             "/api/certificates/import",
@@ -534,7 +535,10 @@ def test_certificate_import_errors_and_upsert(client, tmp_path, monkeypatch):
         client.post(
             "/api/certificates/import",
             headers=headers,
-            json={"name": "directory", "cert_path": str(certificate_dir)},
+            json={
+                "name": "directory",
+                "cert_path": str(certificate_dir / "subdirectory"),
+            },
         ).status_code
         == 422
     )
@@ -562,7 +566,7 @@ def test_certificate_import_errors_and_upsert(client, tmp_path, monkeypatch):
             json={
                 "name": "directory key",
                 "cert_path": str(cert_path),
-                "key_path": str(certificate_dir),
+                "key_path": str(certificate_dir / "subdirectory"),
             },
         ).status_code
         == 422
