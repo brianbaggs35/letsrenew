@@ -388,9 +388,7 @@ def resolve_certificate_path(path: str) -> Path:
         raise HTTPException(
             422, "Certificate paths must resolve inside the mounted certificate directory"
         ) from exc
-    if resolved_path != certificate_root and not resolved_path.startswith(
-        f"{certificate_root}{os.sep}"
-    ):
+    if not resolved_path.startswith(f"{certificate_root}{os.sep}"):
         raise HTTPException(
             422, "Certificate paths must resolve inside the mounted certificate directory"
         )
