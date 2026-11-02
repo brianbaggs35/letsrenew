@@ -37,11 +37,12 @@ The initial version focuses on a single local administrator, DNS-01 issuance, mo
 
 ## Development and automation
 
-The GitHub Actions CI workflow runs pytest and Vitest coverage reports (without a configured coverage threshold), Ruff, ESLint, Bandit, Pyright, vue-tsc, Playwright browser specs, CodeQL, Trivy, and a container build on pushes to `main`/`master` and pull requests. Pushing a `v*` tag runs the release workflow, publishes versioned and `latest` images to GHCR, and creates a GitHub Release:
+The GitHub Actions CI workflow runs pytest and Vitest coverage reports (without a configured coverage threshold), Ruff, ESLint, Bandit, Pyright, vue-tsc, Playwright browser specs, CodeQL, Trivy, and a container build on pushes to `main`/`master` and pull requests. Publishing a GitHub Release runs the release workflow and publishes versioned and `latest` images to GHCR:
 
 ```sh
 git tag v1.0.0
 git push origin v1.0.0
+gh release create v1.0.0 --generate-notes
 ```
 
 The current frontend toolchain uses Node 24, Vue 3, Vite 8, and TypeScript 6.0.3. The app/test image uses Python 3.14.8.
