@@ -382,14 +382,19 @@ class IssueInput(BaseModel):
 
 def resolve_certificate_path(path: str) -> Path:
     try:
-        certificate_root = CERTIFICATES_DIR.resolve(strict=True)
-        resolved_path = Path(path).resolve(strict=True)
-        resolved_path.relative_to(certificate_root)
-    except (OSError, RuntimeError, ValueError) as exc:
+        certificate_root = os.path.realpath(CERTIFICATES_DIR, strict=True)
+        resolved_path = os.path.realpath(path, strict=True)
+    except (OSError, RuntimeError) as exc:
         raise HTTPException(
             422, "Certificate paths must resolve inside the mounted certificate directory"
         ) from exc
-    return resolved_path
+    if resolved_path != certificate_root and not resolved_path.startswith(
+        f"{certificate_root}{os.sep}"
+    ):
+        raise HTTPException(
+            422, "Certificate paths must resolve inside the mounted certificate directory"
+        )
+    return Path(resolved_path)
 
 
 @app.post("/api/login")
