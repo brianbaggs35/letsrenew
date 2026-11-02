@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 TEST_DATA_DIR = tempfile.TemporaryDirectory(prefix="letsrenew-test-")
 os.environ["DATA_DIR"] = TEST_DATA_DIR.name
+os.environ["CERTIFICATES_DIR"] = TEST_DATA_DIR.name
 os.environ["APP_PASSWORD"] = "test-admin-password"
 os.environ["APP_ENCRYPTION_KEY"] = Fernet.generate_key().decode()
 
@@ -508,15 +509,18 @@ def test_provider_cannot_be_deleted_when_used_by_managed_certificate(client):
     assert response.status_code == 409
 
 
-def test_certificate_import_errors_and_upsert(client, tmp_path):
+def test_certificate_import_errors_and_upsert(client, tmp_path, monkeypatch):
+    certificate_dir = tmp_path / "mounted-certificates"
+    certificate_dir.mkdir()
+    monkeypatch.setattr(application, "CERTIFICATES_DIR", certificate_dir)
     headers = auth()
     missing = client.post(
         "/api/certificates/import",
         headers=headers,
-        json={"name": "missing", "cert_path": str(tmp_path / "missing.pem")},
+        json={"name": "missing", "cert_path": str(certificate_dir / "missing.pem")},
     )
     assert missing.status_code == 422
-    invalid = tmp_path / "invalid.pem"
+    invalid = certificate_dir / "invalid.pem"
     invalid.write_text("not a certificate")
     assert (
         client.post(
@@ -526,7 +530,15 @@ def test_certificate_import_errors_and_upsert(client, tmp_path):
         ).status_code
         == 422
     )
-    cert_path = make_certificate(tmp_path / "cert.pem")
+    assert (
+        client.post(
+            "/api/certificates/import",
+            headers=headers,
+            json={"name": "directory", "cert_path": str(certificate_dir)},
+        ).status_code
+        == 422
+    )
+    cert_path = make_certificate(certificate_dir / "cert.pem")
     assert (
         client.post(
             "/api/certificates/import",
@@ -543,7 +555,19 @@ def test_certificate_import_errors_and_upsert(client, tmp_path):
         ).status_code
         == 200
     )
-    replacement = make_certificate(tmp_path / "replacement.pem", 90)
+    assert (
+        client.post(
+            "/api/certificates/import",
+            headers=headers,
+            json={
+                "name": "directory key",
+                "cert_path": str(cert_path),
+                "key_path": str(certificate_dir),
+            },
+        ).status_code
+        == 422
+    )
+    replacement = make_certificate(certificate_dir / "replacement.pem", 90)
     assert (
         client.post(
             "/api/certificates/import",
@@ -554,6 +578,40 @@ def test_certificate_import_errors_and_upsert(client, tmp_path):
     )
     tracked = client.get("/api/certificates", headers=headers).json()
     assert len(tracked) == 1 and tracked[0]["cert_path"] == str(replacement)
+
+    outside_certificate = make_certificate(tmp_path / "outside.pem")
+    escaped_path = certificate_dir / "escaped.pem"
+    escaped_path.symlink_to(outside_certificate)
+    outside_response = client.post(
+        "/api/certificates/import",
+        headers=headers,
+        json={"name": "outside", "cert_path": str(outside_certificate)},
+    )
+    symlink_response = client.post(
+        "/api/certificates/import",
+        headers=headers,
+        json={"name": "escaped", "cert_path": str(escaped_path)},
+    )
+    assert outside_response.status_code == 422
+    assert symlink_response.status_code == 422
+
+    archive_dir = certificate_dir / "archive" / "example.test"
+    live_dir = certificate_dir / "live" / "example.test"
+    archive_dir.mkdir(parents=True)
+    live_dir.mkdir(parents=True)
+    archived_certificate = make_certificate(archive_dir / "fullchain1.pem")
+    (live_dir / "fullchain.pem").symlink_to(archived_certificate)
+    live_response = client.post(
+        "/api/certificates/import",
+        headers=headers,
+        json={"name": "live", "cert_path": str(live_dir / "fullchain.pem")},
+    )
+    assert live_response.status_code == 200
+    with db() as connection:
+        stored_path = connection.execute(
+            "SELECT cert_path FROM certificates WHERE name = 'live'"
+        ).fetchone()["cert_path"]
+    assert stored_path == str(live_dir / "fullchain.pem")
 
 
 def test_issue_route_validates_domains_and_calls_issuer(client, monkeypatch):
